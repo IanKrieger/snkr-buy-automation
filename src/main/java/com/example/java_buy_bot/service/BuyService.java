@@ -7,10 +7,13 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ThreadGuard;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -35,73 +38,77 @@ public class BuyService {
     @Value("${buy.shoe}")
     private boolean buyShoe;
 
-    @Value("${threads}")
-    private int threads;
-
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BuyService.class);
+    private static final long WAIT = 100000L;
 
-    public void buyShoe() {
-        for (int i = 0; i < threads; i ++) {
-            executorService.submit(() -> {
-                final WebDriver webDriver = ThreadGuard.protect(new ChromeDriver());
-                webDriver.get(url);
-                login(webDriver);
-                selectSizeAndBuy(webDriver);
-                putInThatCcv(webDriver);
-
-                if (buyShoe) {
-                    submitOrder(webDriver);
-                }
-            });
-        }
+    public void buyShoe() throws InterruptedException {
+        final WebDriver webDriver = ThreadGuard.protect(new ChromeDriver());
+        webDriver.get(url);
+        login(webDriver);
+        selectSizeAndBuy(webDriver);
+        putInThatCcv(webDriver);
+        submitOrder(webDriver);
     }
 
     private void login(final WebDriver webDriver) {
+        final WebElement logIn = new WebDriverWait(webDriver, WAIT)
+            .until(ExpectedConditions.presenceOfElementLocated(By.xpath("//button[@type='button' and text()='Join / Log In']")));
+        logIn.click();
 
-        webDriver.findElement(By.ByXPath.xpath("//button[@type='button' and text()='Join / Log In']")).click();
-
-        final WebElement emailInput = new WebDriverWait(webDriver, Duration.ofSeconds(10).getSeconds())
-                .until(ExpectedConditions.presenceOfElementLocated(By.ByTagName.name("emailAddress")));
-
+        final WebElement emailInput = new WebDriverWait(webDriver,WAIT)
+                .until(ExpectedConditions.presenceOfElementLocated(By.tagName("emailAddress")));
         // Login Modal has popped up
         emailInput.sendKeys(username);
 
         // can now input psswd
-        webDriver.findElement(By.ByName.name("password")).sendKeys(password);
+        final WebElement passwordInput = new WebDriverWait(webDriver,WAIT)
+            .until(ExpectedConditions.presenceOfElementLocated(By.tagName("password")));
+        passwordInput.sendKeys(password);
+
+        final WebElement signIn = new WebDriverWait(webDriver, WAIT)
+            .until(ExpectedConditions.presenceOfElementLocated(By.xpath("//input[@type='button' and @value='SIGN IN']")));
 
         // press login button
-        webDriver.findElement(By.ByXPath.xpath("//input[@type='button' and @value='SIGN IN']")).click();
+        signIn.click();
     }
 
     private void selectSizeAndBuy(final WebDriver webDriver) {
-        final String buttonElem = String.format("//button[@type='button' and contains(text(), '%s')]", size);
-        final WebElement sizeOption = new WebDriverWait(webDriver, Duration.ofDays(1).toDays())
-                .until(item -> item.findElement(By.ByXPath.xpath(buttonElem)));
+        final WebElement container = new WebDriverWait(webDriver, WAIT)
+            .until(ExpectedConditions.presenceOfElementLocated(By.xpath("//button[@data-qa='size-dropdown' and contains(text(), 'M 10')]")));
 
         /* Find the size. We are waiting a Day to find thee size because this gives opportunity
         to start the app early in the morning, and not worry about it. */
-        sizeOption.click();
+        container.click();
 
-        // Got our size, press the buy button
-        webDriver.findElement(By.ByXPath.xpath("//button[@type='button' and contains(text(), 'Buy')]")).click();
+        final WebElement buyButton = new WebDriverWait(webDriver, WAIT)
+            .until(ExpectedConditions.presenceOfElementLocated((By.xpath("//button[@data-qa='feed-buy-cta']")));
+
+        buyButton.click();
     }
 
     private void putInThatCcv(final WebDriver webDriver) {
         // At this point we are being asked to put in CCV (have CC in acct pls)
-        final WebElement ccvModal = new WebDriverWait(webDriver, Duration.ofHours(1).toHours())
-                .until(item -> item.findElement(By.id("cvNumber")));
+        final WebElement ccvModal = new WebDriverWait(webDriver, WAIT)
+            .until(ExpectedConditions.presenceOfElementLocated((By.id("cvNumber")));
 
         ccvModal.sendKeys(ccv);
 
         // Save the CCV
-        webDriver.findElement(By.ByXPath.xpath("//button[@type='button' and text()='Save & Continue']")).click();
+        final WebElement save = new WebDriverWait(webDriver, WAIT)
+            .until(ExpectedConditions.presenceOfElementLocated(By.xpath("//button[@type='button' and text()='Save & Continue']")));
+        save.click();
     }
 
     private void submitOrder(final WebDriver webDriver) {
         // Thee big guy, submit the order
-        final WebElement submitOrder = new WebDriverWait(webDriver, Duration.ofHours(1).toHours())
-                .until(item -> item.findElement(By.ByXPath.xpath("//button[@type='button' and text()='Submit Order']")));
+        final WebElement submitOrder = new WebDriverWait(webDriver, WAIT)
+            .until(item -> item.findElement(By.ByXPath.xpath("//button[@type='button' and text()='Submit Order']")));
 
-        submitOrder.click();
+        if (buyShoe) {
+            submitOrder.click();
+        } else {
+            LOGGER.info(submitOrder.getText());
+        }
     }
 }
