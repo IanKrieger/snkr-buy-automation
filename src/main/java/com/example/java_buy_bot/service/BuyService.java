@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -36,28 +37,27 @@ public class BuyService {
     @Value("${buy.shoe}")
     private boolean buyShoe;
 
+    @Value("${threads}")
+    private Integer threads;
+
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
     private static final Logger LOGGER = LoggerFactory.getLogger(BuyService.class);
     private static final long WAIT = 100000L;
 
     public void buyShoe() {
-//        for (int i = 0; i < 1; i++) {
-//            executorService.submit(() -> {
+        for (int i = 0; i < Optional.ofNullable(threads).orElse(1); i++) {
+            executorService.submit(() -> {
                 final WebDriver webDriver = ThreadGuard.protect(new ChromeDriver());
                 webDriver.get(url);
                 selectSizeAndBuy(webDriver);
                 login(webDriver);
                 putInThatCcv(webDriver);
                 submitOrder(webDriver);
-//            });
-//        }
+            });
+        }
     }
 
     private void login(final WebDriver webDriver) {
-//        final WebElement logIn = new WebDriverWait(webDriver, WAIT)
-//            .until(item -> item.findElement(By.xpath("//button[@type='button' and text()='Join / Log In']")));
-//        logIn.click();
-
         final WebElement emailInput = new WebDriverWait(webDriver,WAIT)
                 .until(item -> item.findElement(By.name("emailAddress")));
         // Login Modal has popped up
@@ -112,7 +112,6 @@ public class BuyService {
     private void submitOrder(final WebDriver webDriver) {
         // Thee big guy, submit the order
         final WebElement submitOrder = new WebDriverWait(webDriver, WAIT)
-            // //*[@id="checkout-sections"]/div[3]/div/div/div[6]/button
             .until(item -> item.findElement(By.xpath("//*[@id='checkout-sections']/div[3]/div/div/div[6]/button")));
 
         if (buyShoe) {
