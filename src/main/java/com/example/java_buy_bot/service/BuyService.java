@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -35,17 +37,20 @@ public class BuyService {
     @Value("${buy.shoe}")
     private boolean buyShoe;
 
+    @Value("${threads}")
+    private int threads;
+
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
     private static final Logger LOGGER = LoggerFactory.getLogger(BuyService.class);
     private static final long WAIT = 100000L;
 
     public void buyShoe() {
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < threads; i++) {
             executorService.submit(() -> {
                 final WebDriver webDriver = ThreadGuard.protect(new ChromeDriver());
                 webDriver.get(url);
-                login(webDriver);
                 selectSizeAndBuy(webDriver);
+                login(webDriver);
                 putInThatCcv(webDriver);
                 submitOrder(webDriver);
             });
@@ -53,10 +58,6 @@ public class BuyService {
     }
 
     private void login(final WebDriver webDriver) {
-        final WebElement logIn = new WebDriverWait(webDriver, WAIT)
-            .until(item -> item.findElement(By.xpath("//button[@type='button' and text()='Join / Log In']")));
-        logIn.click();
-
         final WebElement emailInput = new WebDriverWait(webDriver,WAIT)
                 .until(item -> item.findElement(By.name("emailAddress")));
         // Login Modal has popped up
@@ -102,20 +103,21 @@ public class BuyService {
         ccvInput.sendKeys(ccv);
 
         // Save the CCV
-        final WebElement save = new WebDriverWait(webDriver.switchTo().parentFrame(), WAIT)
-            .until(item -> item.findElement(By.xpath("//button[@type='button' and text()='Save & Continue']")));
+        final WebElement save = new WebDriverWait(webDriver.switchTo().defaultContent(), WAIT)
+            .until(item -> item.findElement(By.xpath("/html/body/div[2]/div/div/div[2]/div/div/div/div/div[2]/div/div/div[2]/div/span/span[1]/div/button")));
+
         save.click();
     }
 
     private void submitOrder(final WebDriver webDriver) {
         // Thee big guy, submit the order
         final WebElement submitOrder = new WebDriverWait(webDriver, WAIT)
-            .until(item -> item.findElement(By.xpath("//button[@type='button' and text()='Submit Order']")));
+            .until(item -> item.findElement(By.xpath("//*[@id='checkout-sections']/div[3]/div/div/div[6]/button")));
 
         if (buyShoe) {
             submitOrder.click();
         } else {
-            LOGGER.info(submitOrder.getText());
+            LOGGER.info("Didn't buy, but you could have 👀");
         }
     }
 }
