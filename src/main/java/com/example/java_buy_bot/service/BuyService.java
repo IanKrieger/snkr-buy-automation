@@ -38,14 +38,14 @@ public class BuyService {
     private boolean buyShoe;
 
     @Value("${threads}")
-    private Integer threads;
+    private int threads;
 
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
     private static final Logger LOGGER = LoggerFactory.getLogger(BuyService.class);
     private static final long WAIT = 100000L;
 
     public void buyShoe() {
-        for (int i = 0; i < Optional.ofNullable(threads).orElse(1); i++) {
+        for (int i = 0; i < threads; i++) {
             executorService.submit(() -> {
                 final WebDriver webDriver = ThreadGuard.protect(new ChromeDriver());
                 webDriver.get(url);
