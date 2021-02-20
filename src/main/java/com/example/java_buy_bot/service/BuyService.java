@@ -11,8 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -111,8 +109,8 @@ public class BuyService {
 
     private void submitOrder(final WebDriver webDriver) {
         // Thee big guy, submit the order
-        final WebElement submitOrder = new WebDriverWait(webDriver, WAIT)
-            .until(item -> item.findElement(By.xpath("//*[@id='checkout-sections']/div[3]/div/div/div[6]/button")));
+        final WebElement submitOrder = new WebDriverWait(webDriver.switchTo().defaultContent(), WAIT)
+            .until(item -> item.findElement(By.xpath("/html/body/div[2]/div/div/div[2]/div/div/div/div/div[2]/div/div/div[3]/div/div/div[6]/button")));
 
         if (buyShoe) {
             submitOrder.click();
